@@ -176,7 +176,7 @@ impl HuffTree {
     pub fn decode(&self, encoded_message: Vec<u32>) -> String {
         let (valid, error) = self.validate(&encoded_message);
         if !valid {
-            return format!("Error: Invalid data detected. Data Loss: {:.2}%\n", error * 100.0);
+            return format!("Error: Invalid data detected. Data Loss: {:.4}%\n", error * 100.0);
         }
         let mut decoded_message = String::new();
         let mut node = self.root.as_ref().expect("Tree has root.");
@@ -197,7 +197,7 @@ impl HuffTree {
                 node = self.root.as_ref().expect("Tree has root.");
             }
         }
-        format!("Validated message:\n\n{decoded_message}\nData Loss: {:.2}%\n", error * 100.0)
+        format!("Validated message:\n\n{decoded_message}\nData Loss: {:.4}%\n", error * 100.0)
     }
 }
 
