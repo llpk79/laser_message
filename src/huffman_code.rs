@@ -165,7 +165,7 @@ impl HuffTree {
         let min = min(sum, check) as f32;
         let max = max(sum, check) as f32;
         let error = 1.0 - (min / max);
-        (error < 0.995, error)
+        (error < 0.0009, error)
     }
 
     /// Use encoded message to traverse tree and find characters.
