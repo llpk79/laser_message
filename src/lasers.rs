@@ -140,7 +140,7 @@ impl Receiver {
 
         println!("\nIncoming message detected...\n");
         let data = self.receive_message();
-        let message = self.huff_tree.decode(data);
+        let message = self.huff_tree.decode(&data);
 
         // Calculate stats
         let num_kbytes = message.len() as f64 / 1000.0;
