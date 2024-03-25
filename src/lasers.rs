@@ -94,7 +94,8 @@ impl Receiver {
         println!("detecting");
         loop {
             let events = self.in_.edge_events();
-            for event in events {
+            println!("events {:?}", events.len())
+;            for event in events {
                 println!("event detected {:?}", event);
                 match event {
                     Ok(event) => match event.timestamp_ns {
