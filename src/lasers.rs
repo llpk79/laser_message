@@ -1,26 +1,31 @@
 use crate::huffman_code::HuffTree;
-use gpio::GpioValue::{High, Low};
-use gpio::{GpioIn, GpioOut};
+use gpiocdev::line::{Bias, Value::{Inactive, Active}};
+use gpiocdev::Request;
 use std::thread;
 use std::time::Duration;
 
-const LASER_PIN: u16 = 18;
-const RECEIVER_PIN: u16 = 23;
+const LASER_PIN: u32 = 18;
+const RECEIVER_PIN: u32 = 23;
 
 pub struct Laser {
-    out: gpio::sysfs::SysFsGpioOutput,
+    out: Request,
     encoded_message: Vec<u32>,
 }
 
-pub struct Receiver {
-    in_: gpio::sysfs::SysFsGpioInput,
+pub struct  Receiver<'a> {
+    in_ : &'a mut Request,
     huff_tree: HuffTree,
 }
 
 impl Laser {
     pub fn new(encoded_message: Vec<u32>) -> Laser {
         // Open port for laser pin.
-        let out = match gpio::sysfs::SysFsGpioOutput::open(LASER_PIN) {
+        let out = match Request::builder()
+            .on_chip("/dev/gpiochip0")
+            .with_line(LASER_PIN)
+            .as_output(Inactive)
+            .with_bias(Bias::PullUp)
+            .request() {
             Ok(out) => out,
             Err(_e) => panic!(),
         };
@@ -37,25 +42,25 @@ impl Laser {
     /// Terminate message with 1000 microsecond pulse.
     pub fn send_message(&mut self) {
         // Initiation sequence.
-        self.out.set_value(false).expect("Pin is on");
+        self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
         thread::sleep(Duration::from_micros(50));
-        self.out.set_value(true).expect("Pin is on");
+        self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
         thread::sleep(Duration::from_micros(500));
-        self.out.set_value(false).expect("Pin is on");
+        self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
         thread::sleep(Duration::from_micros(50));
 
         // Begin message transmission.
         for bit in &self.encoded_message {
             match *bit == 1 {
                 true => {
-                    self.out.set_value(true).expect("Pin is on");
+                    self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
                     thread::sleep(Duration::from_micros(25));
-                    self.out.set_value(false).expect("Pin is on");
+                    self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
                 }
                 false => {
-                    self.out.set_value(true).expect("Pin is on");
+                    self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
                     thread::sleep(Duration::from_micros(10));
-                    self.out.set_value(false).expect("Pin is on");
+                    self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
                 }
             }
             // Bit resolution. It gets sloppy below 50 microseconds.
@@ -63,16 +68,20 @@ impl Laser {
         }
 
         // Termination sequence.
-        self.out.set_value(true).expect("Pin is on");
+        self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
         thread::sleep(Duration::from_micros(1000));
-        self.out.set_value(false).expect("Pin is on");
+        self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
     }
 }
 
 impl Receiver {
     pub fn new(huff_tree: HuffTree) -> Receiver {
         // Open port for receiver pin.
-        let in_ = match gpio::sysfs::SysFsGpioInput::open(RECEIVER_PIN) {
+        let in_ = match Request::builder()
+            .on_chip("/dev/gpiochip0")
+            .with_line(RECEIVER_PIN)
+            .as_input()
+            .with_bias(Bias::PullUp) {
             Ok(in_) => in_,
             Err(_e) => panic!(),
         };
@@ -81,51 +90,37 @@ impl Receiver {
 
     /// Loop until initiation sequence is detected.
     fn detect_message(&mut self) {
+        let events = self.in_.edge_events();
         loop {
-            while self.in_.read_value().expect("Pin is on") == Low {
-                continue;
-            }
-            // Get the amount of time the laser is on.
-            let begin = chrono::Utc::now();
-            while self.in_.read_value().expect("Pin is on") == High {
-                continue;
-            }
-            let initiation_time = (chrono::Utc::now() - begin)
-                .num_microseconds()
-                .expect("Time has passed");
-            match initiation_time {
-                i64::MIN..=400 => continue,
-                401..=900 => break,
-                901.. => continue,
+            for event in events {
+                match event {
+                    Ok(event) => match event.timestamp_ns {
+                        u64::MIN..=400 => continue,
+                        401..=900 => break,
+                        901.. => continue,
+                    }
+                    None => continue
+                }
             }
         }
     }
-
     /// Push 1 for long pulse, 0 for short.
     ///
     /// Return data upon termination sequence.
     fn receive_message(&mut self) -> Vec<u32> {
         let mut data = Vec::new();
-        loop {
-            while self.in_.read_value().expect("Pin is on") == Low {
-                continue;
+        let events = self.in_.edge_events();
+        for event in events {
+            match event {
+                Ok(event) => match event.timestamp_ns {
+                    u64::MIN..=-0 => continue,
+                    1..=89 => data.push(0),
+                    90..=199 => data.push(1),
+                    200..=1000 => continue, // Bad data, we could guess, I guess?
+                    1001.. => break,        // Termination sequence.
+                }
+                None => continue
             }
-            // Get the amount of time the laser is on.
-            let start = chrono::Utc::now();
-            while self.in_.read_value().expect("Pin is on") == High {
-                continue;
-            }
-            let bit_time = (chrono::Utc::now() - start)
-                .num_microseconds()
-                .expect("Time has passed");
-            // println!("l bit time {}", bit_time);
-            match bit_time {
-                i64::MIN..=-0 => continue,
-                1..=89 => data.push(0),
-                90..=199 => data.push(1),
-                200..=1000 => continue, // Bad data, we could guess, I guess?
-                1001.. => break,        // Termination sequence.
-            };
         }
         data
     }
