@@ -42,25 +42,25 @@ impl Laser {
     /// Terminate message with 1000 microsecond pulse.
     pub fn send_message(&mut self) {
         // Initiation sequence.
-        self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
+        self.out.set_value(LASER_PIN, Inactive).expect("Pin is on");
         thread::sleep(Duration::from_micros(50));
-        self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
+        self.out.set_value(LASER_PIN, Active).expect("Pin is on");
         thread::sleep(Duration::from_micros(500));
-        self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
+        self.out.set_value(LASER_PIN, Inactive).expect("Pin is on");
         thread::sleep(Duration::from_micros(50));
 
         // Begin message transmission.
         for bit in &self.encoded_message {
             match *bit == 1 {
                 true => {
-                    self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
+                    self.out.set_value(LASER_PIN, Active).expect("Pin is on");
                     thread::sleep(Duration::from_micros(25));
-                    self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
+                    self.out.set_value(LASER_PIN, Inactive).expect("Pin is on");
                 }
                 false => {
-                    self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
+                    self.out.set_value(LASER_PIN, Active).expect("Pin is on");
                     thread::sleep(Duration::from_micros(10));
-                    self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
+                    self.out.set_value(LASER_PIN, Inactive).expect("Pin is on");
                 }
             }
             // Bit resolution. It gets sloppy below 50 microseconds.
@@ -68,9 +68,9 @@ impl Laser {
         }
 
         // Termination sequence.
-        self.out.set_value(RECEIVER_PIN, Active).expect("Pin is on");
+        self.out.set_value(LASER_PIN, Active).expect("Pin is on");
         thread::sleep(Duration::from_micros(1000));
-        self.out.set_value(RECEIVER_PIN, Inactive).expect("Pin is on");
+        self.out.set_value(LASER_PIN, Inactive).expect("Pin is on");
     }
 }
 
