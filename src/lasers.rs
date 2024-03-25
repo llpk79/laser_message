@@ -91,9 +91,11 @@ impl Receiver {
 
     /// Loop until initiation sequence is detected.
     fn detect_message(&mut self) {
+        println!("detecting");
         loop {
             let events = self.in_.edge_events();
             for event in events {
+                println!("event detected {:?}", event);
                 match event {
                     Ok(event) => match event.timestamp_ns {
                         u64::MIN..=400 => continue,
