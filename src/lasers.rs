@@ -80,7 +80,7 @@ impl Receiver {
         let in_ = match Request::builder()
             .on_chip("/dev/gpiochip0")
             .with_line(RECEIVER_PIN)
-            .as_input()
+            // .as_input()
             .with_edge_detection(gpiocdev::line::EdgeDetection::FallingEdge)
             .request() {
             Ok(request) => request,
@@ -92,16 +92,16 @@ impl Receiver {
     /// Loop until initiation sequence is detected.
     fn detect_message(&mut self) {
         println!("detecting");
-        loop {
+        'outer: loop {
             let events = self.in_.edge_events();
-            // println!("events {:?}", events.len());
+            println!("events {:?}", events.len());
             if !events.is_empty() {
                 for event in events {
                     println!("event detected {:?}", event);
                     match event {
                         Ok(event) => match event.timestamp_ns {
                             u64::MIN..=400 => continue,
-                            401..=900 => break,
+                            401..=900 => break 'outer,
                             901.. => continue,
                         }
                         Err(_e) => ()
