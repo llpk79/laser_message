@@ -78,7 +78,7 @@ impl Receiver {
     pub fn new(huff_tree: HuffTree) -> Result<Receiver, gpiocdev::Error> {
         // Open port for receiver pin.
         let in_ = match Request::builder()
-            .on_chip("/dev/gpiochip0")
+            .on_chip("/dev/gpiochip1")
             .with_line(RECEIVER_PIN)
             .as_input()
             .with_bias(Bias::PullUp)
