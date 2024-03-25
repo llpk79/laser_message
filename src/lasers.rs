@@ -81,7 +81,7 @@ impl Receiver {
             .on_chip("/dev/gpiochip0")
             .with_line(RECEIVER_PIN)
             .as_input()
-            .with_bias(Bias::PullUp)
+            // .with_bias(Bias::PullUp)
             .request() {
             Ok(request) => request,
             Err(_e) => panic!()
