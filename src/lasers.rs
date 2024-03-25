@@ -5,7 +5,7 @@ use std::thread;
 use std::time::Duration;
 
 const LASER_PIN: u32 = 18;
-const RECEIVER_PIN: u32 = 23;
+const RECEIVER_PIN: u32 = 4;
 
 pub struct Laser {
     out: Request,
