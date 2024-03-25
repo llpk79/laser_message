@@ -78,14 +78,14 @@ impl Receiver {
     pub fn new(huff_tree: HuffTree) -> Result<Receiver, gpiocdev::Error> {
         // Open port for receiver pin.
         let in_ = match Request::builder()
-            .on_chip("/dev/gpiochip1")
+            .on_chip("/dev/gpiochip0")
             .with_line(RECEIVER_PIN)
             // .as_input()
-            .with_debounce_period(Duration::from_millis(0))
+            .with_debounce_period(Duration::from_micros(5))
             .with_edge_detection(gpiocdev::line::EdgeDetection::FallingEdge)
             .request() {
             Ok(request) => request,
-            Err(_e) => panic!()
+            Err(e) => panic!(e)
         };
         Ok(Self { in_, huff_tree })
     }
