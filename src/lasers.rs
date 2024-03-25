@@ -94,16 +94,18 @@ impl Receiver {
         println!("detecting");
         loop {
             let events = self.in_.edge_events();
-            println!("events {:?}", events.len())
-;            for event in events {
-                println!("event detected {:?}", event);
-                match event {
-                    Ok(event) => match event.timestamp_ns {
-                        u64::MIN..=400 => continue,
-                        401..=900 => break,
-                        901.. => continue,
+            println!("events {:?}", events.len());
+            if !events.is_empty() {
+                for event in events {
+                    println!("event detected {:?}", event);
+                    match event {
+                        Ok(event) => match event.timestamp_ns {
+                            u64::MIN..=400 => continue,
+                            401..=900 => break,
+                            901.. => continue,
+                        }
+                        Err(_e) => ()
                     }
-                    Err(_e) => ()
                 }
             }
         }
