@@ -85,7 +85,7 @@ impl Receiver {
             .with_edge_detection(gpiocdev::line::EdgeDetection::FallingEdge)
             .request() {
             Ok(request) => request,
-            Err(e) => panic!(e)
+            Err(e) => panic!("{}", e)
         };
         Ok(Self { in_, huff_tree })
     }
