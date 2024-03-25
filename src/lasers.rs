@@ -81,7 +81,7 @@ impl Receiver {
             .on_chip("/dev/gpiochip0")
             .with_line(RECEIVER_PIN)
             .as_input()
-            // .with_bias(Bias::PullUp)
+            .with_edge_detection(gpiocdev::line::EdgeDetection::FallingEdge)
             .request() {
             Ok(request) => request,
             Err(_e) => panic!()
@@ -94,7 +94,7 @@ impl Receiver {
         println!("detecting");
         loop {
             let events = self.in_.edge_events();
-            println!("events {:?}", events.len());
+            // println!("events {:?}", events.len());
             if !events.is_empty() {
                 for event in events {
                     println!("event detected {:?}", event);
