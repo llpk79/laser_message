@@ -12,8 +12,8 @@ pub struct Laser {
     encoded_message: Vec<u32>,
 }
 
-pub struct  Receiver<'a> {
-    in_ : &'a mut Request,
+pub struct Receiver {
+    in_: Request,
     huff_tree: HuffTree,
 }
 
@@ -75,23 +75,24 @@ impl Laser {
 }
 
 impl Receiver {
-    pub fn new(huff_tree: HuffTree) -> Receiver {
+    pub fn new(huff_tree: HuffTree) -> Result<Receiver, gpiocdev::Error> {
         // Open port for receiver pin.
         let in_ = match Request::builder()
             .on_chip("/dev/gpiochip0")
             .with_line(RECEIVER_PIN)
             .as_input()
-            .with_bias(Bias::PullUp) {
-            Ok(in_) => in_,
-            Err(_e) => panic!(),
+            .with_bias(Bias::PullUp)
+            .request() {
+            Ok(request) => request,
+            Err(_e) => panic!()
         };
-        Self { in_, huff_tree }
+        Ok(Self { in_, huff_tree })
     }
 
     /// Loop until initiation sequence is detected.
     fn detect_message(&mut self) {
-        let events = self.in_.edge_events();
         loop {
+            let events = self.in_.edge_events();
             for event in events {
                 match event {
                     Ok(event) => match event.timestamp_ns {
@@ -99,7 +100,7 @@ impl Receiver {
                         401..=900 => break,
                         901.. => continue,
                     }
-                    None => continue
+                    Err(_e) => ()
                 }
             }
         }
@@ -113,13 +114,13 @@ impl Receiver {
         for event in events {
             match event {
                 Ok(event) => match event.timestamp_ns {
-                    u64::MIN..=-0 => continue,
+                    u64::MIN..=0 => continue,
                     1..=89 => data.push(0),
                     90..=199 => data.push(1),
                     200..=1000 => continue, // Bad data, we could guess, I guess?
                     1001.. => break,        // Termination sequence.
                 }
-                None => continue
+                Err(_e) => continue
             }
         }
         data
@@ -157,7 +158,10 @@ pub fn do_laser(message: String) {
     let encoded_message = huff_tree.encode(message);
 
     // Pass huff_tree to receiver to decode message.
-    let mut receiver = Receiver::new(huff_tree);
+    let mut receiver = match Receiver::new(huff_tree) {
+        Ok(receiver) => receiver,
+        Err(_e) => panic!()
+    };
     let mut laser = Laser::new(encoded_message);
 
     // Start a thread each for the laser and receiver.
