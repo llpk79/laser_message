@@ -81,6 +81,7 @@ impl Receiver {
             .on_chip("/dev/gpiochip0")
             .with_line(RECEIVER_PIN)
             // .as_input()
+            .with_debounce_period(Duration::from_millis(0))
             .with_edge_detection(gpiocdev::line::EdgeDetection::FallingEdge)
             .request() {
             Ok(request) => request,
