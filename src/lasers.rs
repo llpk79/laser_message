@@ -80,8 +80,8 @@ impl Receiver {
         let in_ = match Request::builder()
             .on_chip("/dev/gpiochip0")
             .with_line(RECEIVER_PIN)
-            // .as_input()
-            .with_debounce_period(Duration::from_micros(5))
+            .with_consumer("watcher")
+            // .with_debounce_period(Duration::from_micros(5))
             .with_edge_detection(gpiocdev::line::EdgeDetection::FallingEdge)
             .request() {
             Ok(request) => request,
