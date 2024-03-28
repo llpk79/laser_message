@@ -98,7 +98,6 @@ impl Receiver {
         }
         loop {
             if let Ok(event) = self.in_.read_edge_event() {
-                println!("event detected {:?}", event);
                 let new_ts = event.timestamp_ns;
                 match new_ts - prev_ts {
                     u64::MIN..=400 => {
