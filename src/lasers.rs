@@ -85,7 +85,7 @@ impl Receiver {
             .with_edge_detection(gpiocdev::line::EdgeDetection::FallingEdge)
             .request() {
             Ok(request) => request,
-            Err(e) => panic!("{}", e)
+            Err(e) => return Err(e)
         };
         Ok(Self { in_, huff_tree })
     }
@@ -94,20 +94,15 @@ impl Receiver {
     fn detect_message(&mut self) {
         println!("detecting");
         'outer: loop {
-            let events = self.in_.edge_events();
-            println!("events {:?}", events.len());
-            if !events.is_empty() {
-                for event in events {
-                    println!("event detected {:?}", event);
-                    match event {
-                        Ok(event) => match event.timestamp_ns {
-                            u64::MIN..=400 => continue,
-                            401..=900 => break 'outer,
-                            901.. => continue,
-                        }
-                        Err(_e) => ()
-                    }
+            let event = self.in_.read_edge_event();
+            println!("event detected {:?}", event);
+            match event {
+                Ok(event) => match event.timestamp_ns {
+                    u64::MIN..=400 => continue,
+                    401..=900 => break 'outer,
+                    901.. => continue,
                 }
+                Err(_e) => ()
             }
         }
     }
@@ -166,7 +161,7 @@ pub fn do_laser(message: String) {
     // Pass huff_tree to receiver to decode message.
     let mut receiver = match Receiver::new(huff_tree) {
         Ok(receiver) => receiver,
-        Err(_e) => panic!()
+        Err(e) => panic!("{}", e)
     };
     let mut laser = Laser::new(encoded_message);
 
